@@ -3,9 +3,11 @@ import random
 import numpy as np
 
 windowName = 'Drawing'
-game_size = [12, 12]
+game_size = [12, 12] # This two must be same or BAD things happen...
 N = 50
-arround = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]]
+around = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]]
+num_color = {1:(0, 255, 0), 2:(255, 0, 0), 3:(255, 0, 255),
+             4:255, 5:255, 6:255, 7:255, 8:255, 9:255}
 
 class game:
     def __init__(self, game_size, img):
@@ -31,22 +33,22 @@ class game:
 
         for i in self.mine_list:
             self.game_map[i[0]][i[1]] = "M"
-            for j in arround:
+            for j in around:
                 if i[0] + j[0] == -1 or i[1] + j[1] == -1 or i[0] + j[0] == self.game_size[0] or i[1] + j[1] == self.game_size[1]:
                     continue
                 try:
                     self.game_map[i[0] + j[0]][i[1] + j[1]] += 1
                 except:
                     pass
+
     def draw_game(self):
         for i in range(self.game_size[0] + 1):
-            cv2.line(self.img, (N * i, 0), (N * i, N * self.game_size[1]),
+            cv2.line(self.img, (0, N * i), (N * self.game_size[1], N * i),
                                                              (255,0,0),2)
 
         for i in range(self.game_size[1] + 1):
-            cv2.line(self.img, (0, N * i), (N * self.game_size[0], N * i),
+            cv2.line(self.img, (N * i, 0), (N * i, N * self.game_size[0]),
                                                              (255,0,0),2)
-
     def define_square(self, coord):
         coordx = (coord[0]//N)
         coordy = (coord[1]//N)
@@ -59,21 +61,24 @@ class game:
         elif type == "color":
             self.img[pos[1]*N + 2:pos[1]*N + N - 1, pos[0]*N + 2:pos[0]*N + N - 1] = optional
         elif type == "number":
-            cv2.putText(self.img, str(optional2), (pos[0]*N + int(N * 0.3), pos[1]*N + int(N*0.7)), cv2.FONT_HERSHEY_SIMPLEX, 1,
-            optional, 2)
+            if optional2 == 0:
+                self.markit(pos, "color", (255, 255, 255))
+                return
+            cv2.putText(self.img, str(optional2), (pos[0]*N + int(N * 0.3), pos[1]*N + int(N*0.7)), cv2.FONT_HERSHEY_SIMPLEX, N/50,
+            num_color[optional2], 2)
         else:
             print("Incorrect type of data argument")
 
     def show_mines(self):
         for i in self.mine_list:
-            self.img[i[1]*N + 2:i[1]*N+N - 1, i[0]*N + 2:i[0]*N+N - 1] = (0, 0, 255)
+            self.markit(i, "color", (0, 0, 255))
 
     def open_area(self, coord, dl):
         empties = []
 
         self.markit(coord, "number", (255, 255, 255), int(self.game_map[coord[0]][coord[1]]))
-        for i in arround:
-            if coord[0] + i[0] == -1 or coord[0] + i[0] == -1 or coord[0] + i[0] == self.game_size[0] or coord[1] + i[1] == self.game_size[1]:
+        for i in around:
+            if coord[0] + i[0] == -1 or coord[1] + i[1] == -1 or coord[0] + i[0] == self.game_size[0] or coord[1] + i[1] == self.game_size[1]:
                 continue
             if self.game_map[coord[0] + i[0]][coord[1] + i[1]] == "M":
                 continue
@@ -90,13 +95,16 @@ class game:
             if j not in dl:
                 dl.append(j)
         for i in coordlst:
-            empty_coords.extend(self.open_area(i, dl))
+            ec = self.open_area(i, dl)
+            empty_coords.extend(ec)
+            dl.extend(ec)
         if len(empty_coords) > 0:
             self.empty_open(empty_coords, dl)
 
 def event_func(event, x, y, flags, param):
-    game_square = the_game.define_square([x, y])
+
     if event == cv2.EVENT_LBUTTONDOWN:
+        game_square = the_game.define_square([x, y])
         if the_game.game_map[game_square[0]][game_square[1]] != "M":
             the_game.markit(game_square, "number", (255, 0, 160), int(the_game.game_map[game_square[0]][game_square[1]]))
 
@@ -108,7 +116,8 @@ def event_func(event, x, y, flags, param):
         if the_game.game_map[game_square[0]][game_square[1]] == 0:
             the_game.empty_open([game_square])
     if event == cv2.EVENT_RBUTTONDOWN:
-        the_game.markit(game_square, "color", (125, 45, 255))
+        game_square = the_game.define_square([x, y])
+        the_game.markit(game_square, "color", (0, 0, 255))
 
 img = np.zeros((game_size[0]*N,game_size[1]*N, 3), np.uint8)
 
@@ -118,7 +127,6 @@ cv2.setMouseCallback(windowName, event_func)
 the_game = game(game_size, img)
 the_game.plant_mines(12)
 the_game.draw_game()
-the_game.show_mines()
 
 while (True):
     cv2.imshow(windowName, the_game.img)
