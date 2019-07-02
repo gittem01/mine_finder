@@ -3,28 +3,39 @@ import random
 import numpy as np
 
 windowName = 'Drawing'
-game_size = [8, 8]
+game_size = [12, 12]
 N = 50
+arround = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]]
 
 class game:
     def __init__(self, game_size, img):
         self.game_size = game_size
         self.mine_list = []
         self.img = img
+        self.game_map = np.zeros((self.game_size[0], self.game_size[1])).tolist()
 
-    def plant_mine(self, n, area_size): # Returns a list of coordinates which includes the positions of the mines
+    def plant_mines(self, n): # Returns a list of coordinates which includes the positions of the mines
 
-        def give_coord(AS):
-            coordx = random.randrange(AS[0])
-            coordy = random.randrange(AS[1])
+        def give_coord(S):
+
+            coordx = random.randrange(S[0])
+            coordy = random.randrange(S[1])
             return [coordx, coordy]
 
         while len(self.mine_list) < n:
-            coord = give_coord(area_size)
+            coord = give_coord(self.game_size)
             if coord not in self.mine_list:
                 self.mine_list.append(coord)
             else:
                 continue
+
+        for i in self.mine_list:
+            self.game_map[i[0]][i[1]] = "M"
+            for j in arround:
+                try:
+                    self.game_map[i[0] + j[0]][i[1] + j[1]] += 1
+                except:
+                    pass
 
     def draw_game(self):
         for i in range(self.game_size[0] + 1):
@@ -36,16 +47,37 @@ class game:
                                                              (255,0,0),2)
 
     def define_square(self, coord):
-        coordx = (coord[0]//N) * N
-        coordy = (coord[1]//N) * N
-        self.img[coordy + 2:coordy + N - 1, coordx + 2:coordx + N - 1] = 255
+        coordx = (coord[0]//N)
+        coordy = (coord[1]//N)
+
+        return [coordx, coordy]
+
+    def markit(self, pos, type, optional=0, optional2 = 0):
+        if type == "img":
+            pass
+        elif type == "color":
+            self.img[pos[1]*N + 2:pos[1]*N + N - 1, pos[0]*N + 2:pos[0]*N + N - 1] = optional
+        elif type == "number":
+            cv2.putText(self.img, str(optional2), (pos[0]*N + int(N * 0.3), pos[1]*N + int(N*0.7)), cv2.FONT_HERSHEY_SIMPLEX, 1,
+            optional, 2)
+        else:
+            print("Incorrect type of data argument")
+
+    def show_mines(self):
+        for i in self.mine_list:
+            self.img[i[1]*N + 2:i[1]*N+N - 1, i[0]*N + 2:i[0]*N+N - 1] = (0, 0, 255)
 
 def event_func(event, x, y, flags, param):
-
+    game_square = the_game.define_square([x, y])
     if event == cv2.EVENT_LBUTTONDOWN:
-        cv2.circle(img, (x,y), 1, (255, 0, 0), -1)
-        the_game.define_square([x, y])
-        #Do smth else in here
+        if the_game.game_map[game_square[0]][game_square[1]] != "M":
+            the_game.markit(game_square, "number", (255, 0, 160), int(the_game.game_map[game_square[0]][game_square[1]]))
+        else:
+            the_game.img = np.zeros((game_size[0]*N,game_size[1]*N, 3), np.uint8)
+            the_game.draw_game()
+            the_game.show_mines()
+    if event == cv2.EVENT_RBUTTONDOWN:
+        the_game.markit(game_square, "color", (125, 45, 255))
 
 img = np.zeros((game_size[0]*N,game_size[1]*N, 3), np.uint8)
 
@@ -53,7 +85,9 @@ cv2.namedWindow(windowName)
 cv2.setMouseCallback(windowName, event_func)
 
 the_game = game(game_size, img)
+the_game.plant_mines(12)
 the_game.draw_game()
+#the_game.show_mines()
 
 while (True):
     cv2.imshow(windowName, the_game.img)
