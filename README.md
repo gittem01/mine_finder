@@ -1,10 +1,12 @@
 # Required repositories:
 
-    1 - opencv (py -m pip install opencv-python)
+    1 - opencv (py -m pip install opencv-python for windows)
+    2 - numpy (probably installed within opencv)
 
-    2 - numpy
+# Latest addition(s):
+ - Animations
 
-# Latest additions:
- - Now refreshing the image when something new happens
- - When game is over clicking stops
- - Game automatically destroys wrongly placed red squares when the game is over
+# Future ideas
+ - Start and end menu
+ - Restart, menu buttons (maybe some other)
+ - Prettier animations
