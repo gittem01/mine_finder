@@ -1,12 +1,12 @@
 from src.game import *
 
 def event_func(event, x, y, flags, param):
-
+    if the_game.status == "Ended":
+        return
     if event == cv2.EVENT_LBUTTONDOWN:
         game_square = the_game.define_square([x, y])
         if the_game.game_map[game_square[0]][game_square[1]] != "M":
             the_game.markit(game_square, "number", (255, 0, 160), int(the_game.game_map[game_square[0]][game_square[1]]))
-
         else:
             the_game.show_mines()
 
@@ -26,8 +26,10 @@ the_game.plant_mines(total_mine)
 the_game.draw_game()
 
 while (True):
-    cv2.imshow(windowName, the_game.img)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if the_game.isUpdated:
+        cv2.imshow(windowName, the_game.img)
+        the_game.isUpdated = False
+    if cv2.waitKey(1) == ord("q"):
         break
 
 cv2.destroyAllWindows()

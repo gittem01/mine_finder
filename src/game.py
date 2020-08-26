@@ -3,12 +3,12 @@ import cv2
 import random
 
 around = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]]
-N = 50
-windowName = 'Drawing'
-game_size = [12, 12] # This two must be same or BAD things happen...
+N = 60
+windowName = "do_not_find_anything"
+game_size = [15, 15] # This two must be same or BAD things happen...
 num_color = {1:(0, 255, 0), 2:(255, 125, 0), 3:(255, 0, 255),
              4:255, 5:255, 6:255, 7:255, 8:255, 9:255}
-total_mine = 12
+total_mine = 25
 
 class game:
     def __init__(self, game_size, img):
@@ -16,11 +16,12 @@ class game:
         self.mine_list = []
         self.img = img
         self.game_map = np.zeros((self.game_size[0], self.game_size[1])).tolist()
+        self.status = "Initalized"
+        self.isUpdated = True
 
     def plant_mines(self, n): # Returns a list of coordinates which includes the positions of the mines
 
         def give_coord(S):
-
             coordx = random.randrange(S[0])
             coordy = random.randrange(S[1])
             return [coordx, coordy]
@@ -43,6 +44,7 @@ class game:
                     pass
 
     def draw_game(self):
+        self.status = "Started"
         for i in range(self.game_size[0] + 1):
             cv2.line(self.img, (0, N * i), (N * self.game_size[1], N * i),
                                                              (255,0,0),2)
@@ -57,10 +59,18 @@ class game:
         return [coordx, coordy]
 
     def markit(self, pos, type, optional=0, optional2 = 0):
-        if type == "img":
-            pass
-        elif type == "color":
-            self.img[pos[1]*N + 2:pos[1]*N + N - 1, pos[0]*N + 2:pos[0]*N + N - 1] = optional
+        self.isUpdated = True
+        if type == "color":
+            redish = self.img[pos[1]*N + 2:pos[1]*N + N - 1, pos[0]*N + 2:pos[0]*N + N - 1, 2]
+            avg = self.img[pos[1]*N + 2:pos[1]*N + N - 1, pos[0]*N + 2:pos[0]*N + N - 1]
+            if avg.sum() != 0 and optional == (0, 0, 255):
+                return
+            if optional == (0, 0, 0):
+                if np.all(avg[:, :, 2] == 255) and np.all(avg[:, :, 0] == 0):
+                    self.img[pos[1]*N + 2:pos[1]*N + N - 1, pos[0]*N + 2:pos[0]*N + N - 1] = optional
+            else:
+                self.img[pos[1]*N + 2:pos[1]*N + N - 1, pos[0]*N + 2:pos[0]*N + N - 1] = optional
+
         elif type == "number":
             self.markit(pos, "color", (0, 0, 0))
             if optional2 == 0:
@@ -68,10 +78,12 @@ class game:
                 return
             cv2.putText(self.img, str(optional2), (pos[0]*N + int(N * 0.3), pos[1]*N + int(N*0.7)), cv2.FONT_HERSHEY_SIMPLEX, N/50,
             num_color[optional2], 2)
-        else:
-            print("Incorrect type of data argument")
 
     def show_mines(self):
+        self.status = "Ended"
+        for i in range(game_size[0]):
+            for j in range(game_size[1]):
+                self.markit([i, j], "color", (0, 0, 0))
         for i in self.mine_list:
             self.markit(i, "color", (0, 0, 255))
 
