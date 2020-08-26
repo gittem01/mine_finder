@@ -2,22 +2,31 @@ import numpy as np
 import cv2
 import random
 
+
 around = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]]
 N = 60
-windowName = "do_not_find_anything"
 game_size = [15, 15] # This two must be same or BAD things happen...
 num_color = {1:(0, 255, 0), 2:(255, 125, 0), 3:(255, 0, 255),
              4:255, 5:255, 6:255, 7:255, 8:255, 9:255}
-total_mine = 25
+directions = [[1, 0], [-1, 0], [0, 1], [0, -1]]
 
 class game:
-    def __init__(self, game_size, img):
+    def __init__(self, game_size):
+        self.windowName = "do_not_find_anything"
+        cv2.namedWindow(self.windowName)
         self.game_size = game_size
         self.mine_list = []
-        self.img = img
+        self.img = np.zeros((game_size[0]*N,game_size[1]*N, 3), np.uint8)
         self.game_map = np.zeros((self.game_size[0], self.game_size[1])).tolist()
         self.status = "Initalized"
         self.isUpdated = True
+        self.isAnimating = False
+        self.animPos = 0
+        self.point = 0
+        self.total_mine = 15
+        self.plant_mines(self.total_mine)
+        self.draw_game()
+
 
     def plant_mines(self, n): # Returns a list of coordinates which includes the positions of the mines
 
@@ -61,12 +70,17 @@ class game:
     def markit(self, pos, type, optional=0, optional2 = 0):
         self.isUpdated = True
         if type == "color":
-            redish = self.img[pos[1]*N + 2:pos[1]*N + N - 1, pos[0]*N + 2:pos[0]*N + N - 1, 2]
             avg = self.img[pos[1]*N + 2:pos[1]*N + N - 1, pos[0]*N + 2:pos[0]*N + N - 1]
             if avg.sum() != 0 and optional == (0, 0, 255):
                 return
+            if optional == (0, 0, 255):
+                if self.game_map[pos[0]][pos[1]] == "M":
+                    self.point += 1
+                else:
+                    self.point -= 1
             if optional == (0, 0, 0):
                 if np.all(avg[:, :, 2] == 255) and np.all(avg[:, :, 0] == 0):
+                    self.point += 1
                     self.img[pos[1]*N + 2:pos[1]*N + N - 1, pos[0]*N + 2:pos[0]*N + N - 1] = optional
             else:
                 self.img[pos[1]*N + 2:pos[1]*N + N - 1, pos[0]*N + 2:pos[0]*N + N - 1] = optional
@@ -89,8 +103,7 @@ class game:
 
     def open_area(self, coord, dl):
         empties = []
-
-        self.markit(coord, "number", (255, 255, 255), int(self.game_map[coord[0]][coord[1]]))
+        self.markit(coord, "number", optional2=int(self.game_map[coord[0]][coord[1]]))
         for i in around:
             if coord[0] + i[0] == -1 or coord[1] + i[1] == -1 or coord[0] + i[0] == self.game_size[0] or coord[1] + i[1] == self.game_size[1]:
                 continue
@@ -100,7 +113,7 @@ class game:
             if self.game_map[coord[0] + i[0]][coord[1] + i[1]] == 0 and [coord[0] + i[0], coord[1] + i[1]] not in dl:
                 empties.append([coord[0] + i[0], coord[1] + i[1]])
 
-            self.markit([coord[0] + i[0], coord[1] + i[1]], "number", (255, 255, 255), int(self.game_map[coord[0] + i[0]][coord[1] + i[1]]))
+            self.markit([coord[0] + i[0], coord[1] + i[1]], "number", optional2=int(self.game_map[coord[0] + i[0]][coord[1] + i[1]]))
         return empties
 
     def empty_open(self, coordlst, dl = []):
@@ -114,3 +127,16 @@ class game:
             dl.extend(ec)
         if len(empty_coords) > 0:
             self.empty_open(empty_coords, dl)
+
+    def endAnimation(self, type, frame):
+        global xx
+        self.isAnimating = True
+        if type == "GOOD":
+            if frame % 10 == 0:
+                self.markit(self.mine_list[self.animPos%len(self.mine_list)], "color",
+                            optional=(random.randrange(255), 128, random.randrange(255)))
+                self.animPos += 1
+        elif type == "BAD":
+            self.markit(self.mine_list[self.animPos%len(self.mine_list)], "color",
+                        optional=(0, 0, random.randrange(255)))
+            self.animPos += 1
